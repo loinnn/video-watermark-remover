@@ -1,0 +1,6 @@
+{
+  "name": "视频水印清除工具",
+  "description": "基于 AI 算法与多区域标注的视频水印平滑去除及视频重绘导出工具",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
