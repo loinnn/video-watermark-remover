@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Film, Sparkles, FileVideo, ShieldCheck, CheckCircle2, Play } from 'lucide-react';
-import { SAMPLE_VIDEOS, SampleVideo } from '../utils/sampleVideos';
+import { Upload, Film, Sparkles, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import type { SampleVideo } from '../utils/sampleVideos';
 
 interface VideoUploaderProps {
   onSelectVideo: (file: File | null, sampleUrl?: string, sampleVideo?: SampleVideo) => void;
@@ -110,52 +110,6 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onSelectVideo }) =
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 逐帧处理与导出
             </span>
           </div>
-        </div>
-      </div>
-
-      {/* Preset Sample Videos Section */}
-      <div className="mt-12">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-slate-300 tracking-wider uppercase flex items-center gap-2">
-            <FileVideo className="w-4 h-4 text-indigo-400" />
-            快速体验（示例视频）：
-          </h3>
-          <span className="text-xs text-slate-500">点击下方示例可直接加载测试</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {SAMPLE_VIDEOS.map((sample) => (
-            <div
-              key={sample.id}
-              onClick={() => onSelectVideo(null, sample.url, sample)}
-              className="group relative bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 rounded-xl p-3.5 cursor-pointer transition-all duration-200 flex gap-4 items-center hover:bg-slate-800/80 shadow-md"
-            >
-              <div className="relative w-28 h-20 rounded-lg overflow-hidden bg-slate-950 shrink-0 border border-slate-800">
-                <img
-                  src={sample.thumbnail}
-                  alt={sample.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-slate-950/40 group-hover:bg-slate-950/20 transition-colors flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-indigo-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Play className="w-4 h-4 fill-white ml-0.5" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-slate-200 group-hover:text-indigo-300 transition-colors truncate">
-                  {sample.name}
-                </h4>
-                <p className="text-xs text-slate-400 line-clamp-2 mt-1">
-                  {sample.description}
-                </p>
-                <div className="mt-2 flex items-center gap-2 text-[11px] text-indigo-400">
-                  <span>预设 {sample.defaultRegions?.length || 0} 个水印标注</span>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
