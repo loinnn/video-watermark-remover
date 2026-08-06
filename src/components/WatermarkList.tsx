@@ -16,6 +16,7 @@ interface WatermarkListProps {
   regions: WatermarkRegion[];
   selectedRegionId: string | null;
   duration: number;
+  isImage?: boolean;
   onSelectRegion: (id: string | null) => void;
   onUpdateRegion: (region: WatermarkRegion) => void;
   onDeleteRegion: (id: string) => void;
@@ -26,6 +27,7 @@ export const WatermarkList: React.FC<WatermarkListProps> = ({
   regions,
   selectedRegionId,
   duration,
+  isImage = false,
   onSelectRegion,
   onUpdateRegion,
   onDeleteRegion,
@@ -258,10 +260,10 @@ export const WatermarkList: React.FC<WatermarkListProps> = ({
                       }
                       className="bg-slate-900 border border-slate-700/80 text-slate-200 text-[11px] rounded px-2 py-1 outline-none focus:border-indigo-500 w-full"
                     >
-                      <option value="spatiotemporal">时空邻域边缘平滑 (推荐)</option>
-                      <option value="telea">Telea 快速行进流</option>
-                      <option value="navier_stokes">Navier-Stokes 流体融合</option>
-                      <option value="gaussian_smooth">高斯柔化边缘过渡</option>
+                      <option value="spatiotemporal">✨ AI 智能无痕修补 (推荐·平滑无马赛克)</option>
+                      <option value="telea">🌊 Telea 边界梯度扩散</option>
+                      <option value="navier_stokes">🎨 纹理无缝克隆 (适合复杂背景)</option>
+                      <option value="gaussian_smooth">⚡ GPU 极速合成</option>
                     </select>
                   </div>
 
@@ -398,37 +400,39 @@ export const WatermarkList: React.FC<WatermarkListProps> = ({
                   </div>
 
                   {/* Time Range */}
-                  <div className="pt-1 flex items-center justify-between text-[10px] text-slate-400">
-                    <span className="flex items-center gap-1 text-slate-400">
-                      <Clock className="w-3 h-3 text-indigo-400" /> 生效时间段:
-                    </span>
-                    <div className="flex items-center gap-1 font-mono">
-                      <input
-                        type="number"
-                        min={0}
-                        max={duration || 100}
-                        step={0.1}
-                        value={region.startTime}
-                        onChange={(e) =>
-                          onUpdateRegion({ ...region, startTime: parseFloat(e.target.value) || 0 })
-                        }
-                        className="w-12 bg-slate-900 border border-slate-800 rounded text-center px-1 py-0.5 text-slate-200"
-                      />
-                      <span>s -</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={duration || 100}
-                        step={0.1}
-                        value={region.endTime || duration}
-                        onChange={(e) =>
-                          onUpdateRegion({ ...region, endTime: parseFloat(e.target.value) || duration })
-                        }
-                        className="w-12 bg-slate-900 border border-slate-800 rounded text-center px-1 py-0.5 text-slate-200"
-                      />
-                      <span>s</span>
+                  {!isImage && (
+                    <div className="pt-1 flex items-center justify-between text-[10px] text-slate-400">
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <Clock className="w-3 h-3 text-indigo-400" /> 生效时间段:
+                      </span>
+                      <div className="flex items-center gap-1 font-mono">
+                        <input
+                          type="number"
+                          min={0}
+                          max={duration || 100}
+                          step={0.1}
+                          value={region.startTime}
+                          onChange={(e) =>
+                            onUpdateRegion({ ...region, startTime: parseFloat(e.target.value) || 0 })
+                          }
+                          className="w-12 bg-slate-900 border border-slate-800 rounded text-center px-1 py-0.5 text-slate-200"
+                        />
+                        <span>s -</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={duration || 100}
+                          step={0.1}
+                          value={region.endTime || duration}
+                          onChange={(e) =>
+                            onUpdateRegion({ ...region, endTime: parseFloat(e.target.value) || duration })
+                          }
+                          className="w-12 bg-slate-900 border border-slate-800 rounded text-center px-1 py-0.5 text-slate-200"
+                        />
+                        <span>s</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             );

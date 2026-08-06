@@ -8,6 +8,7 @@ import { HelpModal } from './components/HelpModal';
 import { WatermarkRegion, VideoInfo, ProcessingProgress } from './types';
 import { VideoExporter } from './utils/videoExporter';
 import { SampleVideo } from './utils/sampleVideos';
+import { processCanvasFrame } from './utils/inpainting';
 
 export default function App() {
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
@@ -29,7 +30,7 @@ export default function App() {
 
   const activeExporterRef = useRef<VideoExporter | null>(null);
 
-  // Load video file or sample video
+  // Load video file or sample video or image file
   const handleSelectVideo = (file: File | null, sampleUrl?: string, sampleVideo?: SampleVideo) => {
     let url = '';
     let name = '';
@@ -41,7 +42,35 @@ export default function App() {
       size = file.size;
     } else if (sampleUrl) {
       url = sampleUrl;
-      name = sampleVideo?.name || '示例视频.mp4';
+      name = sampleVideo?.name || '示例文件.mp4';
+    }
+
+    const isImageFile = file
+      ? file.type.startsWith('image/')
+      : sampleUrl
+      ? /\.(png|jpe?g|webp|gif|bmp)$/i.test(sampleUrl)
+      : false;
+
+    if (isImageFile) {
+      const tempImg = new Image();
+      tempImg.crossOrigin = 'anonymous';
+      tempImg.src = url;
+      tempImg.onload = () => {
+        setVideoInfo({
+          file: file || undefined,
+          url,
+          name,
+          size,
+          duration: 0,
+          width: tempImg.naturalWidth || 1280,
+          height: tempImg.naturalHeight || 720,
+          fps: 0,
+          mediaType: 'image',
+        });
+        setRegions([]);
+        setSelectedRegionId(null);
+      };
+      return;
     }
 
     const tempVideo = document.createElement('video');
@@ -61,6 +90,7 @@ export default function App() {
         width: tempVideo.videoWidth || 1280,
         height: tempVideo.videoHeight || 720,
         fps: defaultFps,
+        mediaType: 'video',
       });
 
       // Load preset sample regions if available
@@ -321,10 +351,65 @@ export default function App() {
     }
   };
 
-  // Start Full Video Export Rendering
+  // Start Full Video or Image Export Rendering
   const handleStartExport = async () => {
     if (!videoInfo || regions.length === 0) {
-      showToast('请先在视频画面中框选至少 1 个水印区域');
+      showToast('请先在画面中框选至少 1 个水印区域');
+      return;
+    }
+
+    if (videoInfo.mediaType === 'image') {
+      setExportProgress({
+        isProcessing: true,
+        currentFrame: 1,
+        totalFrames: 1,
+        percent: 50,
+        etaSeconds: 0,
+        renderedBlobUrl: null,
+        error: undefined,
+      });
+      setIsExportModalOpen(true);
+
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoInfo.width || 1280;
+        canvas.height = videoInfo.height || 720;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('无法创建 Canvas 上下文');
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = videoInfo.url;
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('图片加载失败'));
+        });
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        processCanvasFrame(ctx, canvas.width, canvas.height, regions, 0);
+
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, 'image/png')
+        );
+
+        if (!blob) throw new Error('生成去水印图片 Blob 失败');
+
+        const renderedBlobUrl = URL.createObjectURL(blob);
+        setExportProgress({
+          isProcessing: false,
+          currentFrame: 1,
+          totalFrames: 1,
+          percent: 100,
+          etaSeconds: 0,
+          renderedBlobUrl,
+        });
+      } catch (err: any) {
+        setExportProgress((prev) => ({
+          ...prev,
+          isProcessing: false,
+          error: err.message || '导出图片失败',
+        }));
+      }
       return;
     }
 
@@ -384,6 +469,7 @@ export default function App() {
         hasVideo={!!videoInfo}
         regionsCount={regions.length}
         isDetectingAI={isDetectingAI}
+        isImage={videoInfo?.mediaType === 'image'}
         onDetectAI={handleDetectAI}
         onExport={handleStartExport}
         onClearRegions={handleClearRegions}
@@ -416,6 +502,7 @@ export default function App() {
                 regions={regions}
                 selectedRegionId={selectedRegionId}
                 duration={videoInfo.duration}
+                isImage={videoInfo.mediaType === 'image'}
                 onSelectRegion={setSelectedRegionId}
                 onUpdateRegion={handleUpdateRegion}
                 onDeleteRegion={handleDeleteRegion}
@@ -431,6 +518,7 @@ export default function App() {
         isOpen={isExportModalOpen}
         progress={exportProgress}
         videoName={videoInfo?.name}
+        isImage={videoInfo?.mediaType === 'image'}
         onCancel={handleCancelExport}
         onClose={() => setIsExportModalOpen(false)}
       />

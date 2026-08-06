@@ -68,8 +68,26 @@ export const VideoCanvasPlayer: React.FC<VideoCanvasPlayerProps> = ({
 
   const [isDraggingSplitter, setIsDraggingSplitter] = useState(false);
 
+  const isImage = videoInfo.mediaType === 'image';
+  const [imageObj, setImageObj] = useState<HTMLImageElement | null>(null);
+
+  // Load image object if mediaType is image
+  useEffect(() => {
+    if (isImage) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = videoInfo.url;
+      img.onload = () => {
+        setImageObj(img);
+      };
+    } else {
+      setImageObj(null);
+    }
+  }, [isImage, videoInfo.url]);
+
   // Synchronize duration on video load
   useEffect(() => {
+    if (isImage) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -81,40 +99,53 @@ export const VideoCanvasPlayer: React.FC<VideoCanvasPlayerProps> = ({
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
     };
-  }, [videoInfo]);
+  }, [isImage, videoInfo]);
 
   // Main Canvas Render Loop
   const renderFrame = useCallback(() => {
-    const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 720;
+    let sourceElem: HTMLCanvasElement | HTMLVideoElement | HTMLImageElement | null = null;
+    let width = videoInfo.width || 1280;
+    let height = videoInfo.height || 720;
+
+    if (isImage) {
+      if (!imageObj) return;
+      sourceElem = imageObj;
+      width = imageObj.naturalWidth || width;
+      height = imageObj.naturalHeight || height;
+    } else {
+      const video = videoRef.current;
+      if (!video) return;
+      sourceElem = video;
+      width = video.videoWidth || width;
+      height = video.videoHeight || height;
+    }
 
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
     }
 
-    const t = video.currentTime;
+    const t = isImage ? 0 : (videoRef.current?.currentTime || 0);
 
     if (viewMode === 'original') {
-      // Raw video
-      ctx.drawImage(video, 0, 0, width, height);
+      // Raw media
+      ctx.drawImage(sourceElem, 0, 0, width, height);
     } else if (viewMode === 'inpainted') {
-      // Fully inpainted video
-      ctx.drawImage(video, 0, 0, width, height);
+      // Fully inpainted media
+      ctx.drawImage(sourceElem, 0, 0, width, height);
       processCanvasFrame(ctx, width, height, regions, t);
     } else if (viewMode === 'split') {
       // Split view: Left = Inpainted, Right = Original
       const splitX = Math.round((splitRatio / 100) * width);
 
       // Draw original
-      ctx.drawImage(video, 0, 0, width, height);
+      ctx.drawImage(sourceElem, 0, 0, width, height);
 
       // Draw inpainted on offscreen then copy left portion
       const offscreen = document.createElement('canvas');
@@ -122,7 +153,7 @@ export const VideoCanvasPlayer: React.FC<VideoCanvasPlayerProps> = ({
       offscreen.height = height;
       const offCtx = offscreen.getContext('2d');
       if (offCtx) {
-        offCtx.drawImage(video, 0, 0, width, height);
+        offCtx.drawImage(sourceElem, 0, 0, width, height);
         processCanvasFrame(offCtx, width, height, regions, t);
 
         // Copy left slice
@@ -150,12 +181,12 @@ export const VideoCanvasPlayer: React.FC<VideoCanvasPlayerProps> = ({
         ctx.fillRect(width - 110, 10, 100, 26);
         ctx.fillStyle = '#ef4444';
         ctx.font = 'bold 12px sans-serif';
-        ctx.fillText('原始视频', width - 95, 27);
+        ctx.fillText(isImage ? '原始图片' : '原始视频', width - 95, 27);
 
         ctx.restore();
       }
     }
-  }, [viewMode, regions, splitRatio]);
+  }, [isImage, imageObj, viewMode, regions, splitRatio, videoInfo.width, videoInfo.height]);
 
   // RequestAnimationFrame loop when playing
   useEffect(() => {
@@ -810,107 +841,123 @@ export const VideoCanvasPlayer: React.FC<VideoCanvasPlayerProps> = ({
         )}
       </div>
 
-      {/* Video Control Bar */}
-      <div className="bg-slate-950 p-4 border-t border-slate-800 space-y-3">
-        {/* Timeline Scrubber */}
-        <div className="relative flex items-center group">
-          <input
-            type="range"
-            min={0}
-            max={duration || 100}
-            step={0.01}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:h-2.5 transition-all"
-          />
-          {/* Active Watermark Markers on Timeline */}
-          {regions.map((r) => {
-            if (!duration) return null;
-            const startPct = ((r.startTime || 0) / duration) * 100;
-            const endPct = r.endTime ? (r.endTime / duration) * 100 : 100;
-            return (
-              <div
-                key={r.id}
-                style={{ left: `${startPct}%`, width: `${Math.max(1, endPct - startPct)}%` }}
-                className="absolute top-0 h-1.5 bg-indigo-500/40 rounded pointer-events-none"
-              />
-            );
-          })}
-        </div>
-
-        {/* Playback Controls Grid */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* Control Bar */}
+      {isImage ? (
+        <div className="bg-slate-950 p-3.5 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-2">
-            {/* Play/Pause */}
-            <button
-              onClick={togglePlay}
-              className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-900/40 transition-all active:scale-95"
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
-            </button>
-
-            {/* Frame step backward / forward */}
-            <button
-              onClick={() => stepFrame(-1)}
-              className="p-2 rounded-lg text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
-              title="倒退 1 帧 (1/30 秒)"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => stepFrame(1)}
-              className="p-2 rounded-lg text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
-              title="前进 1 帧 (1/30 秒)"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-
-            {/* Timestamp text */}
-            <div className="text-xs font-mono text-slate-300 ml-2">
-              <span className="text-indigo-400 font-semibold">{formatTime(currentTime)}</span>
-              <span className="text-slate-600 mx-1">/</span>
-              <span className="text-slate-400">{formatTime(duration)}</span>
-            </div>
+            <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold text-[10px] border border-indigo-500/30">
+              图片去水印模式
+            </span>
+            <span className="font-mono text-slate-300">
+              原始尺寸: {imageObj?.naturalWidth || videoInfo.width || 0} × {imageObj?.naturalHeight || videoInfo.height || 0} px
+            </span>
+          </div>
+          <div className="text-[11px] text-slate-500">
+            框选水印区域后即可直接导出无痕去水印图片
+          </div>
+        </div>
+      ) : (
+        <div className="bg-slate-950 p-4 border-t border-slate-800 space-y-3">
+          {/* Timeline Scrubber */}
+          <div className="relative flex items-center group">
+            <input
+              type="range"
+              min={0}
+              max={duration || 100}
+              step={0.01}
+              value={currentTime}
+              onChange={handleSeek}
+              className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:h-2.5 transition-all"
+            />
+            {/* Active Watermark Markers on Timeline */}
+            {regions.map((r) => {
+              if (!duration) return null;
+              const startPct = ((r.startTime || 0) / duration) * 100;
+              const endPct = r.endTime ? (r.endTime / duration) * 100 : 100;
+              return (
+                <div
+                  key={r.id}
+                  style={{ left: `${startPct}%`, width: `${Math.max(1, endPct - startPct)}%` }}
+                  className="absolute top-0 h-1.5 bg-indigo-500/40 rounded pointer-events-none"
+                />
+              );
+            })}
           </div>
 
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Playback Speed dropdown */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <span>倍速:</span>
-              <select
-                value={playbackRate}
-                onChange={(e) => changePlaybackRate(parseFloat(e.target.value))}
-                className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-md px-2 py-1 outline-none focus:border-indigo-500"
+          {/* Playback Controls Grid */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              {/* Play/Pause */}
+              <button
+                onClick={togglePlay}
+                className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-900/40 transition-all active:scale-95"
               >
-                <option value={0.5}>0.5x</option>
-                <option value={1}>1.0x</option>
-                <option value={1.5}>1.5x</option>
-                <option value={2}>2.0x</option>
-              </select>
+                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
+              </button>
+
+              {/* Frame step backward / forward */}
+              <button
+                onClick={() => stepFrame(-1)}
+                className="p-2 rounded-lg text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
+                title="倒退 1 帧 (1/30 秒)"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => stepFrame(1)}
+                className="p-2 rounded-lg text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
+                title="前进 1 帧 (1/30 秒)"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Timestamp text */}
+              <div className="text-xs font-mono text-slate-300 ml-2">
+                <span className="text-indigo-400 font-semibold">{formatTime(currentTime)}</span>
+                <span className="text-slate-600 mx-1">/</span>
+                <span className="text-slate-400">{formatTime(duration)}</span>
+              </div>
             </div>
 
-            {/* Mute & Volume */}
-            <div className="flex items-center gap-2">
-              <button onClick={toggleMute} className="text-slate-400 hover:text-white">
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="w-4 h-4 text-red-400" />
-                ) : (
-                  <Volume2 className="w-4 h-4" />
-                )}
-              </button>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={isMuted ? 0 : volume}
-                onChange={changeVolume}
-                className="w-16 h-1 bg-slate-800 rounded appearance-none cursor-pointer accent-indigo-500"
-              />
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Playback Speed dropdown */}
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <span>倍速:</span>
+                <select
+                  value={playbackRate}
+                  onChange={(e) => changePlaybackRate(parseFloat(e.target.value))}
+                  className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-md px-2 py-1 outline-none focus:border-indigo-500"
+                >
+                  <option value={0.5}>0.5x</option>
+                  <option value={1}>1.0x</option>
+                  <option value={1.5}>1.5x</option>
+                  <option value={2}>2.0x</option>
+                </select>
+              </div>
+
+              {/* Mute & Volume */}
+              <div className="flex items-center gap-2">
+                <button onClick={toggleMute} className="text-slate-400 hover:text-white">
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="w-4 h-4 text-red-400" />
+                  ) : (
+                    <Volume2 className="w-4 h-4" />
+                  )}
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={isMuted ? 0 : volume}
+                  onChange={changeVolume}
+                  className="w-16 h-1 bg-slate-800 rounded appearance-none cursor-pointer accent-indigo-500"
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

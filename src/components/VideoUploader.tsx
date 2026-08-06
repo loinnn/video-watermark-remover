@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Film, Sparkles, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Upload, Film, Image as ImageIcon, Sparkles, CheckCircle2 } from 'lucide-react';
 import type { SampleVideo } from '../utils/sampleVideos';
 
 interface VideoUploaderProps {
@@ -30,10 +30,10 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onSelectVideo }) =
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       const file = files[0];
-      if (file.type.startsWith('video/')) {
+      if (file.type.startsWith('video/') || file.type.startsWith('image/')) {
         onSelectVideo(file);
       } else {
-        alert('请上传有效的视频文件（如 MP4, WebM, MOV 等）');
+        alert('请上传有效的视频文件（MP4, WebM, MOV等）或图片文件（PNG, JPG, WebP等）');
       }
     }
   };
@@ -51,13 +51,13 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onSelectVideo }) =
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium mb-4">
           <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          多区域框选 · AI 边缘平滑插值 · 实时原图对比
+          视频 & 图片双模式 · 多区域框选 · AI 边缘平滑插值
         </div>
         <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
           轻松框选水印，一键 AI 平滑修补
         </h2>
         <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto">
-          无需安装复杂软件，拖入视频即可框选任意位置的水印、字幕、图标或字幕角落，AI 算法自动进行时空融合与纹理补全。
+          无需安装复杂软件，拖入视频或图片即可框选任意位置的水印、字幕、图标，AI 算法自动进行平滑融合与纹理补全。
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onSelectVideo }) =
         <input
           ref={fileInputRef}
           type="file"
-          accept="video/*"
+          accept="video/*,image/*"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -88,14 +88,16 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onSelectVideo }) =
           </div>
 
           <h3 className="text-lg font-semibold text-slate-200 mb-2">
-            点击上传 或 将视频拖拽至此处
+            点击上传 或 将视频/图片拖拽至此处
           </h3>
           <p className="text-xs sm:text-sm text-slate-400 mb-6 max-w-md">
-            支持标准视频格式（MP4, WebM, MOV, AVI, MKV 等），浏览器本地实时渲染，隐私安全不泄露
+            支持标准视频格式（MP4, WebM, MOV 等）与图片格式（PNG, JPG, WebP, BMP 等），纯前端实时渲染，隐私安全不泄露
           </p>
 
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-900/40 transition-all">
-            <Film className="w-4 h-4" /> 选择本地视频文件
+          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-900/40 transition-all">
+            <span className="flex items-center gap-1.5"><Film className="w-4 h-4" /> 选择视频</span>
+            <span className="text-indigo-300">/</span>
+            <span className="flex items-center gap-1.5"><ImageIcon className="w-4 h-4" /> 选择图片</span>
           </div>
 
           {/* Features badge */}
@@ -107,7 +109,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({ onSelectVideo }) =
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 智能 AI 自动识别
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 逐帧处理与导出
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 高清无损导出
             </span>
           </div>
         </div>

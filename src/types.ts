@@ -31,12 +31,13 @@ export interface VideoInfo {
   width: number;
   height: number;
   fps: number;
+  mediaType?: 'video' | 'image';
 }
 
 export interface ExportConfig {
   fps: number;
   quality: 'high' | 'medium' | 'low';
-  format: 'webm' | 'mp4';
+  format: 'webm' | 'mp4' | 'png' | 'jpg' | 'webp';
 }
 
 export interface ProcessingProgress {

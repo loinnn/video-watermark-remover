@@ -5,6 +5,7 @@ interface HeaderProps {
   hasVideo: boolean;
   regionsCount: number;
   isDetectingAI: boolean;
+  isImage?: boolean;
   onDetectAI: () => void;
   onExport: () => void;
   onClearRegions: () => void;
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   hasVideo,
   regionsCount,
   isDetectingAI,
+  isImage = false,
   onDetectAI,
   onExport,
   onClearRegions,
@@ -33,14 +35,14 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                视频水印去除工具
+                视频 / 图片水印去除工具
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full flex items-center gap-1">
                 <Sparkles className="w-2.5 h-2.5 text-indigo-400" /> AI 智能修补
               </span>
             </div>
             <p className="text-xs text-slate-400 hidden sm:block">
-              框选任意水印或字幕区域，智能平滑修补无痕导出
+              框选任意视频或图片中的水印、字幕区域，智能平滑修补无痕导出
             </p>
           </div>
         </div>
@@ -58,7 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-purple-900/50 text-purple-300 cursor-not-allowed border border-purple-500/30'
                     : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border border-purple-400/30 shadow-purple-900/30 active:scale-95'
                 }`}
-                title="自动截取当前视频帧并利用 Gemini AI 自动识别可见水印区域"
+                title="利用 AI 智能检测当前画面中的可见水印区域"
               >
                 <Sparkles className={`w-3.5 h-3.5 ${isDetectingAI ? 'animate-spin text-purple-300' : 'text-purple-200'}`} />
                 {isDetectingAI ? 'AI 识别中...' : 'AI 智能识别水印'}
@@ -80,10 +82,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={onResetVideo}
                 className="px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700 transition-all flex items-center gap-1.5 active:scale-95"
-                title="重新上传其他视频"
+                title="更换其他视频或图片"
               >
                 <FileVideo className="w-3.5 h-3.5 text-slate-400" />
-                更换视频
+                更换文件
               </button>
 
               {/* Export Button */}
@@ -92,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/30 border border-emerald-400/30 transition-all flex items-center gap-2 active:scale-95"
               >
                 <Download className="w-3.5 h-3.5" />
-                导出去水印视频
+                导出去水印{isImage ? '图片' : '视频'}
               </button>
             </>
           )}
